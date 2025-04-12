@@ -3,43 +3,44 @@ package com.airtrafficcontrol;
 import java.util.*;
 
 public class DijkstraAlgorithm {
-    public List<int[]> getShortestPath(Graph graph, int start) {
-        int numAirports = graph.getNumAirports();
-        int[] distance = new int[numAirports];
-        int[] prev = new int[numAirports];
-        boolean[] visited = new boolean[numAirports];
-        Arrays.fill(distance, Integer.MAX_VALUE);
-        Arrays.fill(prev, -1);
-        distance[start] = 0;
 
-        for (int i = 0; i < numAirports - 1; i++) {
-            int u = minDistance(distance, visited);
-            visited[u] = true;
+    public static List<Graph.Edge> getShortestPaths(Graph graph, String startCity) {
+        Map<String, Integer> distance = new HashMap<>();
+        Map<String, String> prev = new HashMap<>();
+        PriorityQueue<Graph.Edge> pq = new PriorityQueue<>(Comparator.comparingInt(e -> e.weight));
+        Set<String> visited = new HashSet<>();
 
-            for (int[] edge : graph.getEdges()) {
-                int src = edge[0], dest = edge[1], weight = edge[2];
-                if (src == u && !visited[dest] && distance[u] + weight < distance[dest]) {
-                    distance[dest] = distance[u] + weight;
-                    prev[dest] = u;
+        for (String city : graph.getAllCities()) {
+            distance.put(city, Integer.MAX_VALUE);
+        }
+        distance.put(startCity, 0);
+        pq.add(new Graph.Edge(startCity, startCity, 0));
+
+        while (!pq.isEmpty()) {
+            Graph.Edge current = pq.poll();
+            if (visited.contains(current.destination)) continue;
+            visited.add(current.destination);
+
+            for (Graph.Edge neighbor : graph.getEdges(current.destination)) {
+                int newDist = distance.get(current.destination) + neighbor.weight;
+                if (newDist < distance.get(neighbor.destination)) {
+                    distance.put(neighbor.destination, newDist);
+                    prev.put(neighbor.destination, current.destination);
+                    pq.add(new Graph.Edge(current.destination, neighbor.destination, newDist));
                 }
             }
         }
 
-        List<int[]> path = new ArrayList<>();
-        for (int i = 1; i < numAirports; i++) {
-            if (prev[i] != -1) path.add(new int[]{prev[i], i});
-        }
-        return path;
-    }
-
-    private int minDistance(int[] distance, boolean[] visited) {
-        int min = Integer.MAX_VALUE, minIndex = -1;
-        for (int v = 0; v < distance.length; v++) {
-            if (!visited[v] && distance[v] < min) {
-                min = distance[v];
-                minIndex = v;
+        // Reconstruct paths as edge list (just an example: path to all reachable nodes)
+        List<Graph.Edge> result = new ArrayList<>();
+        for (String dest : graph.getAllCities()) {
+            String source = prev.get(dest);
+            if (source != null) {
+                int weight = distance.get(dest) - distance.get(source);
+                result.add(new Graph.Edge(source, dest, weight));
             }
         }
-        return minIndex;
+
+        return result;
     }
 }
